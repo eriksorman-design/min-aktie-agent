@@ -48,36 +48,31 @@ try:
         st.plotly_chart(fig_pe, use_container_width=True)
         st.write(f"💡 **Agentens observation:** Genomsnittligt P/E under året är **{avg_pe:.2f}**. Just nu ligger vi {'under' if pe_val < avg_pe else 'över'} snittet.")
 
-    # 5. Den Smartare Nyhetsläsaren (Fix för "Info: Nyhet")
+   # 5. Den slutgiltiga nyhetsfixen
     st.subheader("📰 Senaste händelserna")
     news_list = stock.news
     if news_list:
         for item in news_list[:5]:
-            # Vi kollar alla möjliga ställen där rubriken kan gömma sig
-            title = item.get('title')
-            if not title and 'content' in item:
-                title = item['content'].get('title')
+            # Vi kollar ALLA ställen där rubriken kan gömma sig
+            title = item.get('title') or \
+                    (item.get('content') and item['content'].get('title')) or \
+                    item.get('summary') or \
+                    "Viktig marknadshändelse"
             
-            # Om vi fortfarande inte har en rubrik, använd sammanfattningen
-            if not title:
-                title = item.get('summary', 'Viktig uppdatering (klicka för detaljer)')[:80] + "..."
+            publisher = item.get('publisher') or \
+                        (item.get('content') and item['content'].get('publisher')) or \
+                        "Finansnyheter"
             
-            publisher = item.get('publisher', 'Nyhetskälla')
-            link = item.get('link', '#')
+            link = item.get('link') or (item.get('content') and item['content'].get('canonicalUrl')) or "#"
             
-            with st.expander(f"🔹 {publisher}: {title}"):
-                st.write(f"**Rubrik:** {title}")
-                st.write(f"[Läs hela nyheten här]({link})")
+            # Vi rensar bort fula tecken om de finns
+            clean_title = str(title).replace('\xa0', ' ')
+            
+            with st.expander(f"🔹 {publisher}: {clean_title[:75]}..."):
+                st.write(f"**Rubrik:** {clean_title}")
+                st.write(f"[Läs hela artikeln här]({link})")
     else:
         st.info("Inga nyheter hittades just nu.")
-
-    # 6. Kursgraf
-    st.subheader("Kursgraf (1 år)")
-    fig_stock = go.Figure(data=[go.Candlestick(x=hist.index,
-                    open=hist['Open'], high=hist['High'],
-                    low=hist['Low'], close=hist['Close'])])
-    fig_stock.update_layout(template="plotly_dark", height=400)
-    st.plotly_chart(fig_stock, use_container_width=True)
-
 except Exception as e:
+
     st.error(f"Ett fel uppstod: {e}")
